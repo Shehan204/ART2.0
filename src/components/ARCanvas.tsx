@@ -191,11 +191,13 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
         const pos = sceneManagerRef.current.getCameraPosition();
         const dir = sceneManagerRef.current.getCameraDirection();
         
-        // Place object 1.5 meters in front of the camera
-        const targetX = pos.x + dir.x * 1.5;
-        const targetZ = pos.z + dir.z * 1.5;
+        // Find the absolute world coordinate 1.5m in front of the camera
+        const worldTarget = new THREE.Vector3(pos.x + dir.x * 1.5, pos.y + dir.y * 1.5, pos.z + dir.z * 1.5);
         
-        const calculatedGPS = await import('../utils/gps').then(m => m.localToGps(targetX, targetZ, sceneManagerRef.current!.originGPS!.lat, sceneManagerRef.current!.originGPS!.lng));
+        // Convert that world coordinate into the objectsGroup's local space (which handles un-rotating the compass heading)
+        const localTarget = sceneManagerRef.current.objectsGroup.worldToLocal(worldTarget.clone());
+        
+        const calculatedGPS = await import('../utils/gps').then(m => m.localToGps(localTarget.x, localTarget.z, sceneManagerRef.current!.originGPS!.lat, sceneManagerRef.current!.originGPS!.lng));
         finalLat = calculatedGPS.lat;
         finalLng = calculatedGPS.lng;
       } else {
