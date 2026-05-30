@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { SceneManager } from '../ar/SceneManager';
 import { firestoreService } from '../firebase/firestoreService';
+import { compassService } from '../utils/compass';
 import { ARObject } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { haversineDistance } from '../utils/gps';
@@ -26,6 +27,15 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
   const [objects, setObjects] = useState<ARObject[]>([]);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const sessionActiveRef = useRef(false);  
+  const [needsCompassPermission, setNeedsCompassPermission] = useState(compassService.requiresPermission());
+
+  useEffect(() => {
+    if (!needsCompassPermission) {
+      compassService.start();
+    }
+    return () => compassService.stop();
+  }, [needsCompassPermission]);
+
   useEffect(() => {
     // Watch GPS Position
     if (navigator.geolocation && navigator.geolocation.watchPosition) {
@@ -153,7 +163,11 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
     // This ensures that when AR starts, the WebXR origin (0,0,0) perfectly aligns with the latest GPS.
     // Once AR starts, we stop updating originGPS so the world stays anchored.
     if (!sessionActiveRef.current && currentLocation) {
-      sceneManagerRef.current.setOriginGPS(currentLocation.lat, currentLocation.lng);
+      sceneManagerRef.current.setOriginGPSAndHeading(
+        currentLocation.lat, 
+        currentLocation.lng,
+        compassService.heading || 0
+      );
     }
     
     let filteredObjects = objects;
@@ -255,6 +269,26 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center bg-transparent">
+        {needsCompassPermission && (
+          <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center bg-[#0A0B0E]/90 backdrop-blur-sm p-4 text-center">
+            <h2 className="text-xl font-bold text-[#E0E2E5] mb-2 uppercase tracking-widest drop-shadow-md">Compass Access</h2>
+            <p className="text-[#8E9299] text-[10px] font-mono mb-6 max-w-sm uppercase tracking-widest drop-shadow">
+              To align AR objects with the real world, this app needs access to your device's compass.
+            </p>
+            <button 
+              onClick={async () => {
+                const granted = await compassService.requestPermission();
+                if (!granted) {
+                  alert("Compass permission denied. AR alignment will be inaccurate.");
+                }
+                setNeedsCompassPermission(false);
+              }}
+              className="flex items-center gap-2 px-8 py-4 bg-[#00F0FF] text-[#0A0B0E] rounded-sm font-bold shadow-[0_0_20px_rgba(0,240,255,0.2)] text-[10px] uppercase tracking-widest hover:bg-[#00F0FF]/90 transition"
+            >
+              Grant Access
+            </button>
+          </div>
+        )}
         <div ref={containerRef} className="absolute inset-0 w-full h-full bg-transparent" style={{ touchAction: 'none' }} />
         <div ref={buttonContainerRef} className="absolute inset-0 z-[100] pointer-events-none [&>button]:pointer-events-auto" />
     </div>
