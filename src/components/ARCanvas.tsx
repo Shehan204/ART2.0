@@ -172,32 +172,49 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
 
   useImperativeHandle(ref, () => ({
     placeObject: async (type: ARObject['type'], color: string) => {
-      let loc = currentLocation;
-      
-      if (!loc) {
-        // Fallback to fetch immediately or use mock if failed
-        try {
-          loc = await new Promise<{lat: number, lng: number}>((resolve, reject) => {
-            if (!navigator.geolocation) return reject(new Error("No geolocation"));
-            navigator.geolocation.getCurrentPosition(
-              (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              (err) => reject(err),
-              { enableHighAccuracy: true, timeout: 5000 }
-            );
-          });
-          setCurrentLocation(loc);
-        } catch (error) {
-          console.warn("Could not get GPS. Using (0, 0) as fallback.", error);
-          loc = { lat: 0, lng: 0 }; // Fallback location for testing
-          setCurrentLocation(loc);
+      let finalLat = 0;
+      let finalLng = 0;
+
+      if (sceneManagerRef.current && sceneManagerRef.current.originGPS) {
+        // Calculate AR-perfect GPS coordinate by translating camera position 1.5m forward
+        const pos = sceneManagerRef.current.getCameraPosition();
+        const dir = sceneManagerRef.current.getCameraDirection();
+        
+        // Place object 1.5 meters in front of the camera
+        const targetX = pos.x + dir.x * 1.5;
+        const targetZ = pos.z + dir.z * 1.5;
+        
+        const calculatedGPS = await import('../utils/gps').then(m => m.localToGps(targetX, targetZ, sceneManagerRef.current!.originGPS!.lat, sceneManagerRef.current!.originGPS!.lng));
+        finalLat = calculatedGPS.lat;
+        finalLng = calculatedGPS.lng;
+      } else {
+        // Fallback to raw GPS if AR session isn't fully established
+        let loc = currentLocation;
+        if (!loc) {
+          try {
+            loc = await new Promise<{lat: number, lng: number}>((resolve, reject) => {
+              if (!navigator.geolocation) return reject(new Error("No geolocation"));
+              navigator.geolocation.getCurrentPosition(
+                (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                (err) => reject(err),
+                { enableHighAccuracy: true, timeout: 3000 }
+              );
+            });
+            setCurrentLocation(loc);
+          } catch (error) {
+            console.error("No origin GPS and no current GPS available. Cannot place object.", error);
+            return;
+          }
         }
+        finalLat = loc.lat;
+        finalLng = loc.lng;
       }
       
       const newObj: ARObject = {
         id: uuidv4(),
         type,
-        latitude: loc.lat,
-        longitude: loc.lng,
+        latitude: finalLat,
+        longitude: finalLng,
         altitude: -0.5, // slightly below camera height by default
         scale: 1,
         rotation: { x: 0, y: 0, z: 0 },
@@ -214,9 +231,8 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
     deleteLookedAtObject: () => {
        if (!sceneManagerRef.current) return;
        import('three').then(THREE => {
-          const pos = sceneManagerRef.current!.getCameraPosition();
-          const dir = sceneManagerRef.current!.getCameraDirection();
-          const raycaster = new THREE.Raycaster(pos, dir.normalize());
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(new THREE.Vector2(0, 0), sceneManagerRef.current!.camera);
           
           const intersects = raycaster.intersectObjects(sceneManagerRef.current!.scene.children, true);
           if (intersects.length > 0) {
