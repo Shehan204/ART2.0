@@ -1,6 +1,12 @@
 {
-  "name": "",
-  "description": "",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Global AR Experience",
+  "description": "Shared WebXR Augmented Reality experience with GPS anchors.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation",
+    "xr-spatial-tracking"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
