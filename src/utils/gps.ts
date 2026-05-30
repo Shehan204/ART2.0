@@ -18,3 +18,9 @@ export function gpsToLocal(lat: number, lng: number, originLat: number, originLn
   const dx = (lng - originLng) * 111320 * Math.cos(originLat * Math.PI / 180); // X axis (East/West)
   return { x: dx, z: dz };
 }
+
+export function localToGps(x: number, z: number, originLat: number, originLng: number) {
+  const lat = originLat - (z / 111320);
+  const lng = originLng + (x / (111320 * Math.cos(originLat * Math.PI / 180)));
+  return { lat, lng };
+}
