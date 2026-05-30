@@ -311,7 +311,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
              <div>GPS Acc: <span className={gpsAccuracy && gpsAccuracy > 15 ? 'text-[#FF0055]' : 'text-[#00FF00]'}>{gpsAccuracy ? `${gpsAccuracy.toFixed(1)}m` : 'Wait...'}</span></div>
              <div>Heading: {liveHeading !== null ? `${liveHeading.toFixed(1)}°` : 'Wait...'}</div>
              <div className="text-[#8E9299] mt-1 text-[8px] max-w-[120px] leading-tight">
-               If Acc > 10m or Heading is wrong, objects will shift.
+               If Acc &gt; 10m or Heading is wrong, objects will shift.
              </div>
           </div>
         )}
