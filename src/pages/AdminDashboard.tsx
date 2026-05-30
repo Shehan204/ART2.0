@@ -19,11 +19,17 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const arRef = useRef<ARCanvasRef>(null);
   const [sessionActive, setSessionActive] = useState(false);
-  const [selectedType, setSelectedType] = useState<'cube' | 'sphere' | 'cylinder' | 'model'>('cube');
+  const [selectedType, setSelectedType] = useState<'cube' | 'sphere' | 'cylinder' | 'local_model' | 'cloud_model'>('cube');
   const [selectedColor, setSelectedColor] = useState<string>('#ff3366');
   
+  const LOCAL_MODELS = [
+    { id: 'local-1', name: 'Example Chest', url: '/models/chest.glb', pointsValue: 50 },
+    { id: 'local-2', name: 'Example Coin', url: '/models/coin.glb', pointsValue: 10 },
+  ];
+  const [activeLocalModel, setActiveLocalModel] = useState<CustomModel>(LOCAL_MODELS[0]);
+
   const [customModels, setCustomModels] = useState<CustomModel[]>([]);
-  const [activeModel, setActiveModel] = useState<CustomModel | null>(null);
+  const [activeCloudModel, setActiveCloudModel] = useState<CustomModel | null>(null);
 
   // Upload Form
   const [isUploading, setIsUploading] = useState(false);
@@ -44,7 +50,7 @@ export default function AdminDashboard() {
          models.push({ id: doc.id, ...doc.data() } as CustomModel);
        });
        setCustomModels(models);
-       if (models.length > 0 && !activeModel) setActiveModel(models[0]);
+       if (models.length > 0 && !activeCloudModel) setActiveCloudModel(models[0]);
     });
     return () => unsub();
   }, []);
@@ -155,28 +161,41 @@ export default function AdminDashboard() {
             <div className="flex flex-col gap-2 border-r border-[#2D3139] pr-4 shrink-0">
               <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em] mb-1">Shape</label>
               <div className="flex gap-2">
-                {['cube', 'sphere', 'cylinder', 'model'].map((t) => (
+                {['cube', 'sphere', 'cylinder', 'local_model', 'cloud_model'].map((t) => (
                   <button
                     key={t}
                     onClick={() => setSelectedType(t as any)}
                     className={`px-3 py-2 rounded-sm text-[10px] font-mono uppercase tracking-widest transition-colors border ${selectedType === t ? 'bg-[#00F0FF]/10 text-[#00F0FF] border-[#00F0FF]' : 'bg-[#1C1F26] text-[#525866] border-[#2D3139] hover:bg-[#1C1F26]/80 hover:text-[#8E9299]'}`}
                   >
-                    {t === 'cube' ? 'S-Shape' : t}
+                    {t === 'cube' ? 'S-Shape' : t.replace('_', ' ')}
                   </button>
                 ))}
               </div>
             </div>
             
-            {selectedType === 'model' ? (
+            {selectedType === 'local_model' ? (
                <div className="flex flex-col gap-1 justify-center min-w-[200px]">
-                 <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em]">Select Model</label>
+                 <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em]">Local Repo Model</label>
+                 <select 
+                   className="bg-[#1C1F26] text-[#E0E2E5] border border-[#2D3139] text-xs p-1 rounded-sm outline-none"
+                   onChange={(e) => setActiveLocalModel(LOCAL_MODELS.find(m => m.id === e.target.value) || LOCAL_MODELS[0])}
+                   value={activeLocalModel.id}
+                 >
+                   {LOCAL_MODELS.map(m => (
+                     <option key={m.id} value={m.id}>{m.name} ({m.pointsValue} pts)</option>
+                   ))}
+                 </select>
+               </div>
+            ) : selectedType === 'cloud_model' ? (
+               <div className="flex flex-col gap-1 justify-center min-w-[200px]">
+                 <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em]">Cloud Uploads</label>
                  {customModels.length === 0 ? (
                    <span className="text-[10px] text-[#FF0055]">No models uploaded</span>
                  ) : (
                    <select 
                      className="bg-[#1C1F26] text-[#E0E2E5] border border-[#2D3139] text-xs p-1 rounded-sm outline-none"
-                     onChange={(e) => setActiveModel(customModels.find(m => m.id === e.target.value) || null)}
-                     value={activeModel?.id || ''}
+                     onChange={(e) => setActiveCloudModel(customModels.find(m => m.id === e.target.value) || null)}
+                     value={activeCloudModel?.id || ''}
                    >
                      {customModels.map(m => (
                        <option key={m.id} value={m.id}>{m.name} ({m.pointsValue} pts)</option>
@@ -207,9 +226,13 @@ export default function AdminDashboard() {
             </button>
             <button 
               onClick={() => {
-                if (selectedType === 'model') {
-                   if (activeModel) {
-                      arRef.current?.placeObject('model', '#ffffff', activeModel.url, activeModel.pointsValue, activeModel.name);
+                if (selectedType === 'local_model') {
+                   if (activeLocalModel) {
+                      arRef.current?.placeObject('model', '#ffffff', activeLocalModel.url, activeLocalModel.pointsValue, activeLocalModel.name);
+                   }
+                } else if (selectedType === 'cloud_model') {
+                   if (activeCloudModel) {
+                      arRef.current?.placeObject('model', '#ffffff', activeCloudModel.url, activeCloudModel.pointsValue, activeCloudModel.name);
                    } else {
                       alert("Please upload and select a model first.");
                    }
