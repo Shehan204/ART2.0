@@ -28,15 +28,24 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
   
   useEffect(() => {
     // Watch GPS Position
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      (err) => console.warn("GPS tracking error", err),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
+    if (navigator.geolocation && navigator.geolocation.watchPosition) {
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => console.warn("GPS tracking error", err),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+      );
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      console.warn("Geolocation not supported by this environment");
+    }
   }, []);
+
+  const callbacksRef = useRef({ isAdmin, onSessionStart, onSessionEnd, onReady });
+  useEffect(() => {
+    callbacksRef.current = { isAdmin, onSessionStart, onSessionEnd, onReady };
+  }, [isAdmin, onSessionStart, onSessionEnd, onReady]);
 
   useEffect(() => {
     if (!containerRef.current || !buttonContainerRef.current) return;
@@ -79,7 +88,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
     
     // Tap to select/delete
     const onSelect = () => {
-      if (!isAdmin) return;
+      if (!callbacksRef.current.isAdmin) return;
       import('three').then((THREE) => {
         const controller = sceneManager.renderer.xr.getController(0);
         const tempMatrix = new THREE.Matrix4();
@@ -112,18 +121,18 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
     controller.addEventListener('select', onSelect);
     sceneManager.scene.add(controller);
     
-    if (onReady) onReady();
+    if (callbacksRef.current.onReady) callbacksRef.current.onReady();
     
     sceneManager.renderer.xr.addEventListener('sessionstart', () => {
       if (buttonContainerRef.current) buttonContainerRef.current.style.display = 'none';
-      if (onSessionStart) onSessionStart();
+      if (callbacksRef.current.onSessionStart) callbacksRef.current.onSessionStart();
       
       // If we start the session and already have GPS, lock it in as origin immediately
       // Actually we handled this in the sync effect below but this is a good anchor point.
     });
     sceneManager.renderer.xr.addEventListener('sessionend', () => {
       if (buttonContainerRef.current) buttonContainerRef.current.style.display = 'block';
-      if (onSessionEnd) onSessionEnd();
+      if (callbacksRef.current.onSessionEnd) callbacksRef.current.onSessionEnd();
       
       // Reset origin when ending session
       if (sceneManagerRef.current) {
@@ -140,7 +149,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
       if (button.parentElement) button.parentElement.removeChild(button);
       unsubscribe();
     };
-  }, [isAdmin, onReady, onSessionEnd, onSessionStart]);
+  }, []);
 
   useEffect(() => {
     if (!sceneManagerRef.current) return;
