@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { ARCanvas } from '../components/ARCanvas';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, RefreshCw } from 'lucide-react';
 
 export default function ARViewer() {
   const navigate = useNavigate();
+  const arRef = React.useRef<any>(null);
   const [sessionActive, setSessionActive] = useState(false);
 
   return (
     <div className={`relative w-full h-screen overflow-hidden ${sessionActive ? 'bg-transparent' : 'bg-[#0A0B0E]'}`}>
       <ARCanvas 
+        ref={arRef}
         isAdmin={false} 
         onSessionStart={() => setSessionActive(true)}
         onSessionEnd={() => setSessionActive(false)}
@@ -42,12 +44,21 @@ export default function ARViewer() {
       {sessionActive && (
         <div className="absolute inset-0 z-[9999] pointer-events-none flex flex-col justify-between p-4">
           <div className="flex justify-between items-start pointer-events-auto w-full">
-            <button 
-              onClick={() => window.location.reload()}
-              className="flex items-center gap-2 px-4 py-3 bg-[#1C1F26]/90 border border-[#2D3139] backdrop-blur-md text-[#00F0FF] text-[10px] uppercase font-mono tracking-widest rounded-sm hover:bg-[#00F0FF]/10 transition"
-            >
-              Exit AR
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => window.location.reload()}
+                className="flex items-center gap-2 px-4 py-3 bg-[#1C1F26]/90 border border-[#2D3139] backdrop-blur-md text-[#FF0055] hover:text-white text-[10px] uppercase font-mono tracking-widest rounded-sm transition"
+              >
+                Exit
+              </button>
+              <button 
+                onClick={() => arRef.current?.reanchor()}
+                className="flex items-center gap-2 px-4 py-3 bg-[#1C1F26]/90 border border-[#2D3139] backdrop-blur-md text-[#00F0FF] hover:bg-[#00F0FF]/10 text-[10px] uppercase font-mono tracking-widest rounded-sm transition"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Re-Sync GPS
+              </button>
+            </div>
             <div className="bg-[#1C1F26]/90 border border-[#2D3139] backdrop-blur-md px-4 py-2 rounded-sm text-[#00F0FF] text-[10px] uppercase font-mono tracking-widest">
               Exploring World
             </div>
