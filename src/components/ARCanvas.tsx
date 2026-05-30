@@ -252,7 +252,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
           }
        });
     }
-  }));
+  }), [currentLocation]);
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center bg-transparent">
