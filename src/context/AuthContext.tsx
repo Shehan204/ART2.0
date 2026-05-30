@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase/firebase';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { auth, db } from '../firebase/firebase';
 import { User } from '../types';
 import { firestoreService } from '../firebase/firestoreService';
 
@@ -21,23 +22,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let userDocUnsub: (() => void) | null = null;
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Clear previous subscription if it exists
+      if (userDocUnsub) {
+        userDocUnsub();
+        userDocUnsub = null;
+      }
+      
       if (firebaseUser) {
-        // Fetch user doc
-        let u = await firestoreService.getUser(firebaseUser.uid);
-        if (u) {
-           setUser(u);
-        } else {
-           // Fallback if not created properly
-           setUser({ uid: firebaseUser.uid, username: firebaseUser.email || 'User', email: firebaseUser.email || '', role: 'user', points: 0 });
-        }
+        // Subscribe to user doc
+        userDocUnsub = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+             setUser(docSnap.data() as User);
+          } else {
+             // Fallback if not created properly
+             setUser({ uid: firebaseUser.uid, username: firebaseUser.email || 'User', email: firebaseUser.email || '', role: 'user', points: 0 });
+          }
+        });
       } else {
         setUser(null);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+       if (userDocUnsub) userDocUnsub();
+       unsubscribeAuth();
+    };
   }, []);
 
   const login = async (email: string, pass: string) => {
