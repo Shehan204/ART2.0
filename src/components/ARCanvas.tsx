@@ -11,6 +11,7 @@ import { haversineDistance } from '../utils/gps';
 export interface ARCanvasRef {
   placeObject: (type: ARObject['type'], color: string) => void;
   deleteLookedAtObject: () => void;
+  reanchor: () => void;
 }
 
 interface ARCanvasProps {
@@ -278,6 +279,31 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
             }
           }
        });
+    },
+    reanchor: () => {
+      if (!sceneManagerRef.current || !currentLocation) {
+        alert("Cannot re-sync: GPS location not available yet.");
+        return;
+      }
+      const sm = sceneManagerRef.current;
+      const heading = compassService.heading || 0;
+      
+      const pos = sm.getCameraPosition();
+      const dir = sm.getCameraDirection();
+      
+      // Move the origin of the AR world to the camera's current physical position
+      sm.objectsGroup.position.copy(pos);
+      
+      // Rotate the AR world so its North aligns with physical True North based on camera's current direction
+      const cameraY = Math.atan2(dir.x, dir.z) + Math.PI;
+      sm.objectsGroup.rotation.y = cameraY + (heading * Math.PI / 180);
+      
+      // Lock in the new GPS and Heading
+      sm.originGPS = { lat: currentLocation.lat, lng: currentLocation.lng };
+      sm.originHeading = heading;
+      sm.syncObjects(sm.currentARObjects);
+      
+      console.log("Re-anchored AR world to", currentLocation, "heading:", heading);
     }
   }), [currentLocation]);
 
