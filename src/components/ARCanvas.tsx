@@ -25,7 +25,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
   const sceneManagerRef = useRef<SceneManager | null>(null);
   const [objects, setObjects] = useState<ARObject[]>([]);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
-  
+  const sessionActiveRef = useRef(false);  
   useEffect(() => {
     // Watch GPS Position
     if (navigator.geolocation && navigator.geolocation.watchPosition) {
@@ -124,20 +124,15 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
     if (callbacksRef.current.onReady) callbacksRef.current.onReady();
     
     sceneManager.renderer.xr.addEventListener('sessionstart', () => {
+      sessionActiveRef.current = true;
       if (buttonContainerRef.current) buttonContainerRef.current.style.display = 'none';
       if (callbacksRef.current.onSessionStart) callbacksRef.current.onSessionStart();
-      
-      // If we start the session and already have GPS, lock it in as origin immediately
-      // Actually we handled this in the sync effect below but this is a good anchor point.
     });
     sceneManager.renderer.xr.addEventListener('sessionend', () => {
+      sessionActiveRef.current = false;
       if (buttonContainerRef.current) buttonContainerRef.current.style.display = 'block';
       if (callbacksRef.current.onSessionEnd) callbacksRef.current.onSessionEnd();
       
-      // Reset origin when ending session
-      if (sceneManagerRef.current) {
-         sceneManagerRef.current.originGPS = null;
-      }
     });
 
     const unsubscribe = firestoreService.subscribeToObjects((fetched) => setObjects(fetched));
@@ -154,8 +149,10 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
   useEffect(() => {
     if (!sceneManagerRef.current) return;
     
-    // First time we get GPS and we are in an active session (or about to be), set it as origin
-    if (!sceneManagerRef.current.originGPS && currentLocation) {
+    // Continuously update originGPS to current physical location BEFORE AR session starts
+    // This ensures that when AR starts, the WebXR origin (0,0,0) perfectly aligns with the latest GPS.
+    // Once AR starts, we stop updating originGPS so the world stays anchored.
+    if (!sessionActiveRef.current && currentLocation) {
       sceneManagerRef.current.setOriginGPS(currentLocation.lat, currentLocation.lng);
     }
     
