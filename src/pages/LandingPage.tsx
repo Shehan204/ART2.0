@@ -53,7 +53,7 @@ export default function LandingPage() {
                 onClick={() => logout()}
                 className="flex items-center gap-2 px-3 py-1 rounded bg-[#1C1F26] border border-[#2D3139] text-[#8E9299] text-[10px] font-mono tracking-widest uppercase hover:text-white transition-colors"
               >
-                Logout ({user.username})
+                Logout ()
               </button>
             </>
           )}
