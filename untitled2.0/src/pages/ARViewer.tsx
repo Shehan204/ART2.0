@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
-import { ARCanvas, ARCanvasRef } from '../components/ARCanvas';
+import { ARCanvas } from '../components/ARCanvas';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, RefreshCw, Crosshair } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { ChevronLeft, RefreshCw } from 'lucide-react';
 
 export default function ARViewer() {
   const navigate = useNavigate();
-  const arRef = React.useRef<ARCanvasRef>(null);
+  const arRef = React.useRef<any>(null);
   const [sessionActive, setSessionActive] = useState(false);
-  const { user } = useAuth();
-  
-  React.useEffect(() => {
-    if (!user) {
-       navigate('/login');
-    }
-  }, [user, navigate]);
 
   return (
     <div className={`relative w-full h-screen overflow-hidden ${sessionActive ? 'bg-transparent' : 'bg-[#0A0B0E]'}`}>
@@ -48,14 +40,6 @@ export default function ARViewer() {
             </p>
         </div>
       )}
-
-      {sessionActive && (
-        <div className="absolute inset-0 z-[9998] pointer-events-none flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-[#00F0FF]/50 rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(0,240,255,0.3)]">
-            <div className="w-1 h-1 bg-[#00F0FF] rounded-full"></div>
-          </div>
-        </div>
-      )}
       
       {sessionActive && (
         <div className="absolute inset-0 z-[9999] pointer-events-none flex flex-col justify-between p-4">
@@ -72,28 +56,12 @@ export default function ARViewer() {
                 className="flex items-center gap-2 px-4 py-3 bg-[#1C1F26]/90 border border-[#2D3139] backdrop-blur-md text-[#00F0FF] hover:bg-[#00F0FF]/10 text-[10px] uppercase font-mono tracking-widest rounded-sm transition"
               >
                 <RefreshCw className="w-3 h-3" />
-                Re-Sync
+                Re-Sync GPS
               </button>
             </div>
             <div className="bg-[#1C1F26]/90 border border-[#2D3139] backdrop-blur-md px-4 py-2 rounded-sm text-[#00F0FF] text-[10px] uppercase font-mono tracking-widest">
-              Points: {user?.points || 0}
+              Exploring World
             </div>
-          </div>
-
-          <div className="flex justify-center pointer-events-auto pb-4">
-             <button 
-               onClick={async () => {
-                  if (!user) return;
-                  const success = await arRef.current?.collectLookedAtObject(user.uid);
-                  if (success) {
-                     alert("Object Collected! Points added.");
-                  }
-               }}
-               className="flex items-center gap-2 px-10 py-5 bg-[#00F0FF] text-[#0A0B0E] rounded-full font-bold shadow-[0_0_30px_rgba(0,240,255,0.5)] text-lg uppercase tracking-widest hover:bg-[#00F0FF]/90 transition transform hover:scale-105 active:scale-95"
-             >
-               <Crosshair className="w-6 h-6" />
-               COLLECT
-             </button>
           </div>
         </div>
       )}

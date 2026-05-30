@@ -1,18 +1,21 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /objects/{objectId} {
-      allow read: if true;
-      allow write: if true;
+    // AR objects collection — the collection the app actually writes to
+    match /objects/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /adminModels/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Legacy anchors collection (unused but kept for safety)
+    match /anchors/{document=**} {
+      allow read, write: if true;
     }
     
     match /users/{userId} {
-      allow read: if true;
-      allow write: if true;
-    }
-    
-    match /anchors/{document=**} {
       allow read, write: if true;
     }
   }

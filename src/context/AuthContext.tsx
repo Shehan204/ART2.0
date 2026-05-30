@@ -1,39 +1,35 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
+import { User } from '../types';
 import { firestoreService } from '../firebase/firestoreService';
-import { UserData } from '../types';
 
 interface AuthContextType {
-  user: UserData | null;
+  user: User | null;
   loading: boolean;
-  loginCustom?: (username: string, pass: string, isSignUp?: boolean) => Promise<boolean>;
-  logoutCustom?: () => void;
+  login: (email: string, pass: string) => Promise<void>;
+  signup: (email: string, pass: string, username: string, isAdmin?: boolean) => Promise<void>;
+  logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, loading: true, login: async () => {}, signup: async () => {}, logout: () => {} 
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const mockUser = localStorage.getItem('mockAdmin');
-    if (mockUser === 'shehan') {
-      setUser({ id: 'shehan', username: 'shehan', role: 'admin', score: 0, createdAt: 0 });
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Fetch user document
-        let userData = await firestoreService.getUser(firebaseUser.uid);
-        if (userData) {
-          setUser({ ...userData, id: firebaseUser.uid });
+        // Fetch user doc
+        let u = await firestoreService.getUser(firebaseUser.uid);
+        if (u) {
+           setUser(u);
         } else {
-          // If no doc but logged in, they might be anon or just created.
-          setUser({ id: firebaseUser.uid, username: firebaseUser.email?.split('@')[0] || 'Player', role: 'user', score: 0, createdAt: Date.now() });
+           // Fallback if not created properly
+           setUser({ uid: firebaseUser.uid, username: firebaseUser.email || 'User', email: firebaseUser.email || '', role: 'user', points: 0 });
         }
       } else {
         setUser(null);
@@ -44,44 +40,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const loginCustom = async (username: string, pass: string, isSignUp: boolean = false) => {
-    if (username.toLowerCase() === 'shehan' && pass === '0000') {
-      localStorage.setItem('mockAdmin', 'shehan');
-      try {
-        await signInAnonymously(auth);
-      } catch (e) {}
-      setUser({ id: 'shehan', username: 'shehan', role: 'admin', score: 0, createdAt: Date.now() });
-      return true;
-    }
-
-    const email = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@ar-app.local`;
-    try {
-      if (isSignUp) {
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        await firestoreService.createUser(cred.user.uid, username);
-      } else {
-        await signInWithEmailAndPassword(auth, email, pass);
-      }
-      return true;
-    } catch (e: any) {
-      if (e.code === 'auth/operation-not-allowed') {
-        alert("CRITICAL ERROR: You must enable 'Email/Password' Sign-in provider in your Firebase Console -> Authentication -> Sign-in method!");
-      } else {
-        console.error("Login Error:", e);
-        alert(e.message);
-      }
-      return false;
-    }
+  const login = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
   };
 
-  const logoutCustom = () => {
-    localStorage.removeItem('mockAdmin');
-    setUser(null);
+  const signup = async (email: string, pass: string, username: string, isAdmin: boolean = false) => {
+    const res = await createUserWithEmailAndPassword(auth, email, pass);
+    const newUser: User = { uid: res.user.uid, username, email, role: isAdmin ? 'admin' : 'user', points: 0 };
+    await firestoreService.saveUser(newUser);
+    setUser(newUser);
+  };
+
+  const logout = () => {
     auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginCustom, logoutCustom }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

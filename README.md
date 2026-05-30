@@ -1,37 +1,20 @@
-# Knight Quest AR
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+</div>
 
-A production-ready WebXR/WebAR application for shared real-world digital anchors.
+# Run and deploy your AI Studio app
 
-## Features
-- Shared AR Coordinate System
-- Admin Dashboard for Placing Objects
-- Real-time Sync via Firestore
-- Firebase Authentication for Secure Access
-- Extensible Anchor/Object Systems
+This contains everything you need to run your app locally.
 
-## Core Technologies
-- React 19 + Vite
-- Tailwind CSS
-- Three.js + WebXR API
-- Firebase (Auth, Firestore)
+View your app in AI Studio: https://ai.studio/apps/1a8c7876-7a06-4210-899c-7a39712dbba4
 
-## Local Development
-1. Run `npm install`
-2. Create `.env.local` and add your Firebase configurations:
-```
-VITE_FIREBASE_API_KEY=your_key
-VITE_FIREBASE_AUTH_DOMAIN=your_domain
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-```
-3. Run `npm run dev`
+## Run Locally
 
-## Deployment (Vercel)
-The project includes a `vercel.json` file for proper Single-Page App (SPA) routing. Push the repository to GitHub and import it into Vercel. Ensure you add the environment variables in the Vercel dashboard.
+**Prerequisites:**  Node.js
 
-## Firebase Setup
-1. Enable **Authentication** in Firebase Console (Google Provider).
-2. Enable **Firestore**. Look at `firestore.rules` for security rules. deployed via Firebase CLI.
-3. Configure **Authorized domains** for Authentication if hosting on a custom domain.
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

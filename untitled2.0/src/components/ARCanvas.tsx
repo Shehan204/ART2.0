@@ -9,9 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { haversineDistance } from '../utils/gps';
 
 export interface ARCanvasRef {
-  placeObject: (type: ARObject['type'], color: string, modelUrl?: string, pointsValue?: number, name?: string) => void;
+  placeObject: (type: ARObject['type'], color: string) => void;
   deleteLookedAtObject: () => void;
-  collectLookedAtObject: (userId: string) => Promise<boolean>;
   reanchor: () => void;
 }
 
@@ -196,7 +195,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
   }, [objects, currentLocation]);
 
   useImperativeHandle(ref, () => ({
-    placeObject: async (type: ARObject['type'], color: string, modelUrl?: string, pointsValue?: number, name?: string) => {
+    placeObject: async (type: ARObject['type'], color: string) => {
       let finalLat = 0;
       let finalLng = 0;
 
@@ -240,9 +239,6 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
       const newObj: ARObject = {
         id: uuidv4(),
         type,
-        modelUrl,
-        name: name || 'Object',
-        pointsValue: pointsValue || 10,
         latitude: finalLat,
         longitude: finalLng,
         altitude: -0.5, // slightly below camera height by default
@@ -283,44 +279,6 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
             }
           }
        });
-    },
-    collectLookedAtObject: async (userId: string) => {
-       if (!sceneManagerRef.current || !currentLocation) return false;
-       const THREE = await import('three');
-       const raycaster = new THREE.Raycaster();
-       raycaster.setFromCamera(new THREE.Vector2(0, 0), sceneManagerRef.current!.camera);
-       
-       const intersects = raycaster.intersectObjects(sceneManagerRef.current!.scene.children, true);
-       if (intersects.length > 0) {
-         const findGroup = (obj: THREE.Object3D): THREE.Group | null => {
-            if (obj.userData?.arObject) return obj as THREE.Group;
-            if (obj.parent) return findGroup(obj.parent);
-            return null;
-         };
-         
-         for (let i = 0; i < intersects.length; i++) {
-            const group = findGroup(intersects[i].object);
-            if (group && group.userData?.arObject) {
-               const objData = group.userData.arObject as ARObject;
-               
-               // Distance check: e.g., 20 meters
-               const dist = haversineDistance(currentLocation, { lat: objData.latitude, lng: objData.longitude });
-               if (dist <= 20) {
-                  try {
-                     await firestoreService.collectObject(objData.id, userId, objData.pointsValue || 10);
-                     return true;
-                  } catch (e) {
-                     console.error("Failed to collect", e);
-                     return false;
-                  }
-               } else {
-                  alert(`You are too far! Distance: ${Math.round(dist)}m (Need to be <20m). Walk closer!`);
-                  return false;
-               }
-            }
-         }
-       }
-       return false;
     },
     reanchor: () => {
       if (!sceneManagerRef.current || !currentLocation) {

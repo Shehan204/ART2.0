@@ -1,9 +1,6 @@
 export interface ARObject {
   id: string;
   type: 'cube' | 'sphere' | 'cylinder' | 'model' | 'text';
-  modelUrl?: string; // If type is model
-  name?: string;
-  pointsValue: number;
   latitude: number;
   longitude: number;
   altitude: number;
@@ -16,8 +13,6 @@ export interface ARObject {
 
 export interface User {
   uid: string;
-  username: string;
-  email?: string;
+  email: string;
   role: 'admin' | 'user';
-  points: number;
 }

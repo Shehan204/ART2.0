@@ -1,29 +1,80 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ARCanvas, ARCanvasRef } from '../components/ARCanvas';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Plus, Trash2, Home, RefreshCw } from 'lucide-react';
-import { logout } from '../firebase/firebase';
+import { LogOut, Plus, Trash2, Home, RefreshCw, Upload, FileCube } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { storageService } from '../firebase/storageService';
+import { db } from '../firebase/firebase';
+import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
+
+interface CustomModel {
+  id: string;
+  name: string;
+  url: string;
+  pointsValue: number;
+}
 
 export default function AdminDashboard() {
-  const { user, loading, logoutCustom } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const arRef = useRef<ARCanvasRef>(null);
   const [sessionActive, setSessionActive] = useState(false);
-  const [selectedType, setSelectedType] = useState<'cube' | 'sphere' | 'cylinder'>('cube');
+  const [selectedType, setSelectedType] = useState<'cube' | 'sphere' | 'cylinder' | 'model'>('cube');
   const [selectedColor, setSelectedColor] = useState<string>('#ff3366');
+  
+  const [customModels, setCustomModels] = useState<CustomModel[]>([]);
+  const [activeModel, setActiveModel] = useState<CustomModel | null>(null);
 
-  // Protect route
-  React.useEffect(() => {
-    if (!loading && !user) {
+  // Upload Form
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadName, setUploadName] = useState('');
+  const [uploadPoints, setUploadPoints] = useState(10);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== 'admin')) {
       navigate('/login');
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'adminModels'), (snapshot) => {
+       const models: CustomModel[] = [];
+       snapshot.forEach(doc => {
+         models.push({ id: doc.id, ...doc.data() } as CustomModel);
+       });
+       setCustomModels(models);
+       if (models.length > 0 && !activeModel) setActiveModel(models[0]);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile) return;
+    setIsUploading(true);
+    try {
+      const url = await storageService.uploadModel(uploadFile);
+      const id = Date.now().toString();
+      await setDoc(doc(db, 'adminModels', id), {
+        name: uploadName,
+        url,
+        pointsValue: Number(uploadPoints)
+      });
+      setUploadName('');
+      setUploadPoints(10);
+      setUploadFile(null);
+      alert('Model uploaded effectively!');
+    } catch (e: any) {
+       alert("Error uploading: " + e.message);
+    }
+    setIsUploading(false);
+  };
+
   if (loading || !user) return <div className="min-h-screen bg-[#0A0B0E] flex items-center justify-center text-white">Loading...</div>;
 
   return (
-    <div className={`relative w-full h-screen overflow-hidden ${sessionActive ? 'bg-transparent' : 'bg-[#0A0B0E]'}`}>
+    <div className={`relative w-full h-screen overflow-hidden ${sessionActive ? 'bg-transparent' : 'bg-[#0A0B0E] overflow-y-auto'}`}>
       <ARCanvas 
         ref={arRef} 
         isAdmin={true} 
@@ -32,13 +83,10 @@ export default function AdminDashboard() {
       />
       
       {!sessionActive && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none p-4 pb-32">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-start pointer-events-auto p-4 py-16 overflow-y-auto">
           <h1 className="text-4xl font-bold text-[#E0E2E5] mb-2 uppercase tracking-widest drop-shadow-md">Admin Dashboard</h1>
-          <p className="text-[10px] text-[#8E9299] font-mono tracking-widest uppercase mb-8 text-center max-w-md drop-shadow mt-4">
-            ENTER AR MODE TO PLACE OBJECTS. YOU CAN DRAG THE CROSSHAIR OR TAP ON PLACED OBJECTS TO DELETE THEM.
-          </p>
           
-          <div className="flex gap-4 pointer-events-auto">
+          <div className="flex gap-4 mb-8">
               <button 
                 onClick={() => navigate('/')}
                 className="flex items-center gap-2 text-[#525866] hover:text-[#00F0FF] bg-[#14161B]/80 border border-[#2D3139] px-4 py-2 rounded-sm text-[10px] font-mono tracking-widest uppercase transition-colors"
@@ -47,23 +95,54 @@ export default function AdminDashboard() {
                 Home
               </button>
               <button 
-                onClick={async () => { 
-                  if (logoutCustom) logoutCustom(); 
-                  else await logout(); 
-                  navigate('/'); 
-                }}
+                onClick={async () => { await logout(); navigate('/'); }}
                 className="flex items-center gap-2 text-[#525866] hover:text-[#FF0055] bg-[#14161B]/80 border border-[#2D3139] px-4 py-2 rounded-sm text-[10px] font-mono tracking-widest uppercase transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 Sign Out
               </button>
           </div>
+
+          <div className="bg-[#14161B] border border-[#2D3139] p-6 rounded-sm w-full max-w-md mb-8">
+            <h2 className="text-[#00F0FF] text-sm uppercase tracking-widest font-bold mb-4 flex items-center gap-2"><Upload className="w-4 h-4"/> Upload Custom 3D Model</h2>
+            <form onSubmit={handleUpload} className="flex flex-col gap-4">
+              <div>
+                <label className="text-[10px] font-mono text-[#8E9299] uppercase tracking-widest">Model Name</label>
+                <input 
+                  type="text" 
+                  value={uploadName} onChange={e => setUploadName(e.target.value)} required
+                  className="w-full bg-[#0A0B0E] border border-[#2D3139] text-[#E0E2E5] p-2 rounded-sm text-xs font-mono uppercase focus:border-[#00F0FF] outline-none mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-[#8E9299] uppercase tracking-widest">Points Value</label>
+                <input 
+                  type="number" 
+                  value={uploadPoints} onChange={e => setUploadPoints(Number(e.target.value))} required
+                  className="w-full bg-[#0A0B0E] border border-[#2D3139] text-[#E0E2E5] p-2 rounded-sm text-xs font-mono uppercase focus:border-[#00F0FF] outline-none mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-[#8E9299] uppercase tracking-widest">.GLB / .GLTF File</label>
+                <input 
+                  type="file" accept=".glb,.gltf"
+                  onChange={e => setUploadFile(e.target.files?.[0] || null)} required
+                  className="w-full text-xs text-[#E0E2E5] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-mono file:tracking-widest file:bg-[#1C1F26] file:text-[#00F0FF] hover:file:bg-[#2D3139] mt-1"
+                />
+              </div>
+              <button disabled={isUploading} type="submit" className="bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#0A0B0E] py-2 rounded-sm text-[10px] font-bold tracking-widest uppercase transition-colors disabled:opacity-50 mt-2">
+                {isUploading ? 'Uploading...' : 'Upload Model'}
+              </button>
+            </form>
+          </div>
+          <p className="text-[10px] text-[#8E9299] font-mono tracking-widest uppercase text-center max-w-md drop-shadow max-w-sm mb-4">
+             UPLOAD MODELS ABOVE OR CLICK AR CONTROLS TO ENTER THE WORLD.
+          </p>
         </div>
       )}
 
       {sessionActive && (
         <div className="absolute inset-0 z-[9998] pointer-events-none flex items-center justify-center">
-          {/* Crosshair for looking at objects */}
           <div className="w-6 h-6 border-2 border-white/50 rounded-full flex items-center justify-center backdrop-blur-sm">
             <div className="w-1 h-1 bg-[#FF0055] rounded-full"></div>
           </div>
@@ -72,12 +151,11 @@ export default function AdminDashboard() {
 
       {sessionActive && (
         <div className="absolute inset-0 z-[9999] pointer-events-none flex flex-col justify-end p-4 pb-8">
-          {/* Controls overlay */}
-          <div className="mx-auto bg-[#14161B]/90 backdrop-blur-md rounded-sm p-4 flex gap-4 pointer-events-auto border border-[#2D3139] shadow-2xl mb-4">
-            <div className="flex flex-col gap-2 border-r border-[#2D3139] pr-4">
+          <div className="mx-auto bg-[#14161B]/90 backdrop-blur-md rounded-sm p-4 flex gap-4 pointer-events-auto border border-[#2D3139] shadow-2xl mb-4 overflow-x-auto max-w-full">
+            <div className="flex flex-col gap-2 border-r border-[#2D3139] pr-4 shrink-0">
               <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em] mb-1">Shape</label>
               <div className="flex gap-2">
-                {['cube', 'sphere', 'cylinder'].map((t) => (
+                {['cube', 'sphere', 'cylinder', 'model'].map((t) => (
                   <button
                     key={t}
                     onClick={() => setSelectedType(t as any)}
@@ -89,15 +167,34 @@ export default function AdminDashboard() {
               </div>
             </div>
             
-            <div className="flex flex-col gap-1 justify-center">
-              <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em]">Color</label>
-              <input 
-                type="color" 
-                value={selectedColor}
-                onChange={(e) => setSelectedColor(e.target.value)}
-                className="w-10 h-10 rounded-sm cursor-pointer bg-[#1C1F26] border border-[#2D3139] p-0"
-              />
-            </div>
+            {selectedType === 'model' ? (
+               <div className="flex flex-col gap-1 justify-center min-w-[200px]">
+                 <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em]">Select Model</label>
+                 {customModels.length === 0 ? (
+                   <span className="text-[10px] text-[#FF0055]">No models uploaded</span>
+                 ) : (
+                   <select 
+                     className="bg-[#1C1F26] text-[#E0E2E5] border border-[#2D3139] text-xs p-1 rounded-sm outline-none"
+                     onChange={(e) => setActiveModel(customModels.find(m => m.id === e.target.value) || null)}
+                     value={activeModel?.id || ''}
+                   >
+                     {customModels.map(m => (
+                       <option key={m.id} value={m.id}>{m.name} ({m.pointsValue} pts)</option>
+                     ))}
+                   </select>
+                 )}
+               </div>
+            ) : (
+              <div className="flex flex-col gap-1 justify-center shrink-0">
+                <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em]">Color</label>
+                <input 
+                  type="color" 
+                  value={selectedColor}
+                  onChange={(e) => setSelectedColor(e.target.value)}
+                  className="w-10 h-10 rounded-sm cursor-pointer bg-[#1C1F26] border border-[#2D3139] p-0"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-center gap-4 pointer-events-auto">
@@ -110,7 +207,15 @@ export default function AdminDashboard() {
             </button>
             <button 
               onClick={() => {
-                arRef.current?.placeObject(selectedType, selectedColor);
+                if (selectedType === 'model') {
+                   if (activeModel) {
+                      arRef.current?.placeObject('model', '#ffffff', activeModel.url, activeModel.pointsValue, activeModel.name);
+                   } else {
+                      alert("Please upload and select a model first.");
+                   }
+                } else {
+                  arRef.current?.placeObject(selectedType, selectedColor, undefined, 10, selectedType.toUpperCase());
+                }
               }}
               className="flex items-center gap-2 px-8 py-4 bg-[#00F0FF] text-[#0A0B0E] rounded-sm font-bold shadow-[0_0_20px_rgba(0,240,255,0.2)] text-[10px] uppercase tracking-widest hover:bg-[#00F0FF]/90 transition"
             >
