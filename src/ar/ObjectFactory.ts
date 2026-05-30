@@ -38,6 +38,11 @@ export class ObjectFactory {
         undefined,
         (error) => {
           console.error("An error happened loading GLTF", error);
+          // Fallback box to make sure SOMETHING renders if the model fails
+          const fallbackGeom = new THREE.BoxGeometry(1, 1, 1);
+          const fallbackMat = new THREE.MeshStandardMaterial({ color: '#ff0000', wireframe: true });
+          const fallbackMesh = new THREE.Mesh(fallbackGeom, fallbackMat);
+          group.add(fallbackMesh);
         }
       );
       return group;
