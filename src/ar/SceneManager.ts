@@ -75,14 +75,13 @@ export class SceneManager {
   public syncObjects(objects: ARObject[]) {
     this.currentARObjects = objects;
     
-    const existingIds = this.objectsGroup.children.map(child => child.uuid);
     const newIds = objects.map(o => o.id);
     
-    const toRemove = this.objectsGroup.children.filter(child => !newIds.includes(child.uuid));
+    const toRemove = this.objectsGroup.children.filter(child => !newIds.includes(child.userData?.arObject?.id));
     toRemove.forEach(child => this.objectsGroup.remove(child));
 
     objects.forEach(obj => {
-      let mesh = this.objectsGroup.children.find(c => c.uuid === obj.id) as THREE.Group;
+      let mesh = this.objectsGroup.children.find(c => c.userData?.arObject?.id === obj.id) as THREE.Group;
       if (mesh) {
         ObjectFactory.updateMesh(mesh, obj);
       } else {
