@@ -23,8 +23,8 @@ export default function AdminDashboard() {
   const [selectedColor, setSelectedColor] = useState<string>('#ff3366');
   
   const LOCAL_MODELS = [
-    { id: 'local-1', name: 'Example Chest', url: '/models/chest.glb', pointsValue: 50 },
-    { id: 'local-2', name: 'Example Coin', url: '/models/coin.glb', pointsValue: 10 },
+    { id: 'local-1', name: 'Knight', url: '/models/knight.glb', pointsValue: 10 },
+    { id: 'local-2', name: 'Example Coin', url: '/models/coin.glb', pointsValue: 5 },
   ];
   const [activeLocalModel, setActiveLocalModel] = useState<CustomModel>(LOCAL_MODELS[0]);
 
