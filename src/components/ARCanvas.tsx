@@ -336,8 +336,12 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
              <div className="font-bold text-[#E0E2E5] mb-1">SENSOR DEBUG</div>
              <div>GPS Acc: <span className={gpsAccuracy && gpsAccuracy > 15 ? 'text-[#FF0055]' : 'text-[#00FF00]'}>{gpsAccuracy ? `${gpsAccuracy.toFixed(1)}m` : 'Wait...'}</span></div>
              <div>Heading: {liveHeading !== null ? `${liveHeading.toFixed(1)}°` : 'Wait...'}</div>
+             <div>Objects Loaded: {objects.length}</div>
+             {objects.length > 0 && currentLocation && (
+               <div>Nearest: {Math.min(...objects.map(o => haversineDistance(currentLocation, {lat: o.latitude, lng: o.longitude}))).toFixed(1)}m away</div>
+             )}
              <div className="text-[#8E9299] mt-1 text-[8px] max-w-[120px] leading-tight">
-               If Acc over 10m or Heading is wrong, objects will shift.
+               If Acc &gt; 10m or Heading is wrong, objects will shift.
              </div>
           </div>
         )}
