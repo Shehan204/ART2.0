@@ -6,7 +6,7 @@ import { User } from '../types';
 interface AuthContextType {
   user: any | null;
   loading: boolean;
-  loginCustom?: (username: string, pass: string) => boolean;
+  loginCustom?: (username: string, pass: string) => Promise<boolean>;
   logoutCustom?: () => void;
 }
 
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loginCustom = async (username: string, pass: string) => {
-    if (username === 'shehan' && pass === '0000') {
+    if (username.toLowerCase() === 'shehan' && pass === '0000') {
       localStorage.setItem('mockAdmin', 'shehan');
       try {
         await signInAnonymously(auth);
