@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { ARCanvas, ARCanvasRef } from '../components/ARCanvas';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Plus, Trash2, Home } from 'lucide-react';
+import { LogOut, Plus, Trash2, Home, RefreshCw } from 'lucide-react';
 import { logout } from '../firebase/firebase';
 import { useAuth } from '../context/AuthContext';
 
@@ -101,6 +101,13 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex justify-center gap-4 pointer-events-auto">
+            <button 
+              onClick={() => arRef.current?.reanchor()}
+              className="flex items-center justify-center gap-2 px-4 h-12 bg-[#2D3139] text-[#E0E2E5] rounded-sm shadow-[0_0_20px_rgba(45,49,57,0.2)] hover:bg-[#2D3139]/80 transition border border-[#525866]"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="text-[10px] font-bold tracking-widest uppercase hidden sm:block">Re-Sync GPS</span>
+            </button>
             <button 
               onClick={() => {
                 arRef.current?.placeObject(selectedType, selectedColor);
