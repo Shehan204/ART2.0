@@ -4,7 +4,6 @@ import { ARObject } from '../types';
 export class ObjectFactory {
   public static createMesh(obj: ARObject): THREE.Group {
     const group = new THREE.Group();
-    group.uuid = obj.id; 
     group.userData = { arObject: obj };
     
     let geometry: THREE.BufferGeometry;
