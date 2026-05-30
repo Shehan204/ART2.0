@@ -10,6 +10,7 @@ export class SceneManager {
   private objectsGroup: THREE.Group;
   
   public originGPS: { lat: number; lng: number } | null = null;
+  public originHeading: number | null = null;
   public currentARObjects: ARObject[] = [];
 
   constructor(container: HTMLElement) {
@@ -50,8 +51,13 @@ export class SceneManager {
     this.renderer.render(this.scene, this.camera);
   }
 
-  public setOriginGPS(lat: number, lng: number) {
+  public setOriginGPSAndHeading(lat: number, lng: number, heading: number) {
     this.originGPS = { lat, lng };
+    this.originHeading = heading;
+    
+    // Rotate the entire objects group to align with True North based on the device compass
+    this.objectsGroup.rotation.y = THREE.MathUtils.degToRad(heading);
+    
     this.syncObjects(this.currentARObjects); // Re-calculate local positions
   }
 
