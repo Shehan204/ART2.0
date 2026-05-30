@@ -172,16 +172,32 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
 
   useImperativeHandle(ref, () => ({
     placeObject: async (type: ARObject['type'], color: string) => {
-      if (!currentLocation) {
-        alert("Waiting for GPS signal to place object...");
-        return;
+      let loc = currentLocation;
+      
+      if (!loc) {
+        // Fallback to fetch immediately or use mock if failed
+        try {
+          loc = await new Promise<{lat: number, lng: number}>((resolve, reject) => {
+            if (!navigator.geolocation) return reject(new Error("No geolocation"));
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+              (err) => reject(err),
+              { enableHighAccuracy: true, timeout: 5000 }
+            );
+          });
+          setCurrentLocation(loc);
+        } catch (error) {
+          console.warn("Could not get GPS. Using (0, 0) as fallback.", error);
+          loc = { lat: 0, lng: 0 }; // Fallback location for testing
+          setCurrentLocation(loc);
+        }
       }
       
       const newObj: ARObject = {
         id: uuidv4(),
         type,
-        latitude: currentLocation.lat,
-        longitude: currentLocation.lng,
+        latitude: loc.lat,
+        longitude: loc.lng,
         altitude: -0.5, // slightly below camera height by default
         scale: 1,
         rotation: { x: 0, y: 0, z: 0 },
