@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import { ARCanvas } from '../components/ARCanvas';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, RefreshCw } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Crosshair } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function ARViewer() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const arRef = React.useRef<any>(null);
   const [sessionActive, setSessionActive] = useState(false);
+
+  React.useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
+  if (!user) return null;
 
   return (
     <div className={`relative w-full h-screen overflow-hidden ${sessionActive ? 'bg-transparent' : 'bg-[#0A0B0E]'}`}>
@@ -60,8 +70,25 @@ export default function ARViewer() {
               </button>
             </div>
             <div className="bg-[#1C1F26]/90 border border-[#2D3139] backdrop-blur-md px-4 py-2 rounded-sm text-[#00F0FF] text-[10px] uppercase font-mono tracking-widest">
-              Exploring World
+              Score: {user.score || 0}
             </div>
+          </div>
+          
+          {/* Crosshair for targeting objects */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-8 h-8 border-2 border-[#00F0FF]/50 rounded-full flex items-center justify-center backdrop-blur-sm">
+              <div className="w-1.5 h-1.5 bg-[#00F0FF] rounded-full"></div>
+            </div>
+          </div>
+
+          <div className="flex justify-center pb-8 pointer-events-auto">
+            <button 
+              onClick={() => arRef.current?.collectLookedAtObject(user.id)}
+              className="flex items-center gap-2 px-8 py-4 bg-[#00F0FF] text-[#0A0B0E] font-bold text-xs uppercase tracking-widest rounded-sm hover:bg-[#00F0FF]/90 transition shadow-[0_0_30px_rgba(0,240,255,0.3)]"
+            >
+              <Crosshair className="w-5 h-5" />
+              Collect Object
+            </button>
           </div>
         </div>
       )}

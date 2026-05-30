@@ -16,3 +16,11 @@ export interface User {
   email: string;
   role: 'admin' | 'user';
 }
+
+export interface UserData {
+  id?: string;
+  username: string;
+  score: number;
+  role: 'admin' | 'user';
+  createdAt: number;
+}

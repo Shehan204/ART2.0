@@ -1,9 +1,10 @@
 import { db } from './firebase';
-import { collection, onSnapshot, setDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { ARObject } from '../types';
+import { collection, onSnapshot, setDoc, doc, deleteDoc, updateDoc, runTransaction, getDoc, query, orderBy, limit } from 'firebase/firestore';
+import { ARObject, UserData } from '../types';
 
 export class FirestoreService {
   private collectionName = 'objects';
+  private usersCollection = 'users';
 
   public subscribeToObjects(callback: (objects: ARObject[]) => void) {
     return onSnapshot(collection(db, this.collectionName), (snapshot) => {
@@ -42,6 +43,62 @@ export class FirestoreService {
       console.error("Error deleting object", error);
       throw error;
     }
+  }
+
+  // User & Game Methods
+  public async getUser(userId: string): Promise<UserData | null> {
+    const docSnap = await getDoc(doc(db, this.usersCollection, userId));
+    return docSnap.exists() ? docSnap.data() as UserData : null;
+  }
+
+  public async createUser(userId: string, username: string): Promise<void> {
+    const userData: UserData = {
+      username,
+      score: 0,
+      role: 'user',
+      createdAt: Date.now()
+    };
+    await setDoc(doc(db, this.usersCollection, userId), userData);
+  }
+
+  public async collectObject(userId: string, objectId: string, points: number): Promise<boolean> {
+    try {
+      await runTransaction(db, async (transaction) => {
+        const objRef = doc(db, this.collectionName, objectId);
+        const userRef = doc(db, this.usersCollection, userId);
+        
+        const objDoc = await transaction.get(objRef);
+        if (!objDoc.exists()) {
+          throw new Error("Object already collected or does not exist!");
+        }
+
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw new Error("User does not exist!");
+        }
+
+        const currentScore = userDoc.data().score || 0;
+        
+        // Delete object and increment user score atomically
+        transaction.delete(objRef);
+        transaction.update(userRef, { score: currentScore + points });
+      });
+      return true;
+    } catch (e) {
+      console.error("Transaction failed: ", e);
+      return false;
+    }
+  }
+
+  public subscribeToLeaderboard(callback: (users: UserData[]) => void) {
+    const q = query(collection(db, this.usersCollection), orderBy("score", "desc"), limit(50));
+    return onSnapshot(q, (snapshot) => {
+      const users: UserData[] = [];
+      snapshot.forEach((doc) => {
+         users.push({ id: doc.id, ...doc.data() } as any);
+      });
+      callback(users);
+    });
   }
 }
 

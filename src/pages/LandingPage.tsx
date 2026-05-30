@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ARSessionManager } from '../ar/ARSessionManager';
-import { Cuboid, Map, Shield } from 'lucide-react';
+import { Map, Shield, Trophy } from 'lucide-react';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -50,6 +50,14 @@ export default function LandingPage() {
           >
             <Map className="w-4 h-4" />
             {arSupported === false ? 'AR NOT SUPPORTED' : 'ENTER AR WORLD'}
+          </button>
+          
+          <button 
+            onClick={() => navigate('/leaderboard')}
+            className="flex-1 sm:flex-none flex justify-center items-center gap-2 bg-[#1C1F26] hover:bg-[#2D3139] border border-[#2D3139] text-[#E0E2E5] px-8 py-4 rounded-sm font-bold text-xs uppercase tracking-widest transition-all"
+          >
+            <Trophy className="w-4 h-4 text-[#FFD700]" />
+            LEADERBOARD
           </button>
         </div>
 

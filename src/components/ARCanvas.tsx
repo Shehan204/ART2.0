@@ -11,6 +11,7 @@ import { haversineDistance } from '../utils/gps';
 export interface ARCanvasRef {
   placeObject: (type: ARObject['type'], color: string) => void;
   deleteLookedAtObject: () => void;
+  collectLookedAtObject: (userId: string) => void;
   reanchor: () => void;
 }
 
@@ -279,6 +280,51 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
             }
           }
        });
+    },
+    collectLookedAtObject: async (userId: string) => {
+       if (!sceneManagerRef.current) return;
+       const sm = sceneManagerRef.current;
+       const raycaster = new THREE.Raycaster();
+       raycaster.setFromCamera(new THREE.Vector2(0, 0), sm.camera);
+       
+       const intersects = raycaster.intersectObjects(sm.scene.children, true);
+       if (intersects.length > 0) {
+         const findGroup = (obj: THREE.Object3D): THREE.Group | null => {
+           if (obj.userData?.arObject) return obj as THREE.Group;
+           if (obj.parent) return findGroup(obj.parent);
+           return null;
+         };
+         
+         for (let i = 0; i < intersects.length; i++) {
+            const group = findGroup(intersects[i].object);
+            if (group && group.userData?.arObject?.id) {
+               const arObject = group.userData.arObject as ARObject;
+               
+               // Check physical distance
+               const worldPos = new THREE.Vector3();
+               group.getWorldPosition(worldPos);
+               const distance = worldPos.distanceTo(sm.camera.position);
+               
+               if (distance > 8) { // 8 meters collect range
+                 alert(`Too far! You are ${distance.toFixed(1)}m away. Get closer to collect.`);
+                 return;
+               }
+
+               // Points Mapping (Update this when custom 3D models are added!)
+               let points = 10;
+               if (arObject.type === 'sphere') points = 50;
+               if (arObject.type === 'cylinder') points = 100;
+
+               const success = await firestoreService.collectObject(userId, arObject.id, points);
+               if (success) {
+                  alert(`Collected ${arObject.type} for ${points} points!`);
+               } else {
+                  alert("Failed to collect object. Maybe someone else got it first!");
+               }
+               break;
+            }
+         }
+       }
     },
     reanchor: () => {
       if (!sceneManagerRef.current || !currentLocation) {
