@@ -108,8 +108,8 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
           
           for (let i = 0; i < intersects.length; i++) {
              const group = findGroup(intersects[i].object);
-             if (group && group.uuid) {
-                 firestoreService.deleteObject(group.uuid).catch(console.error);
+             if (group && group.userData?.arObject?.id) {
+                 firestoreService.deleteObject(group.userData.arObject.id).catch(console.error);
                  return;
              }
           }
@@ -224,8 +224,10 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
       
       try {
         await firestoreService.saveObject(newObj);
+        console.log("Object placed successfully");
       } catch (e) {
         console.error("Failed to save object", e);
+        alert("Failed to place object: " + (e as Error).message);
       }
     },
     deleteLookedAtObject: () => {
@@ -244,8 +246,8 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
             
             for (let i = 0; i < intersects.length; i++) {
                const group = findGroup(intersects[i].object);
-               if (group && group.uuid) {
-                  firestoreService.deleteObject(group.uuid).catch(console.error);
+               if (group && group.userData?.arObject?.id) {
+                  firestoreService.deleteObject(group.userData.arObject.id).catch(console.error);
                   break;
                }
             }
