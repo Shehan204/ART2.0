@@ -26,6 +26,8 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
   const sceneManagerRef = useRef<SceneManager | null>(null);
   const [objects, setObjects] = useState<ARObject[]>([]);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [liveHeading, setLiveHeading] = useState<number | null>(null);
   const sessionActiveRef = useRef(false);  
   const [needsCompassPermission, setNeedsCompassPermission] = useState(compassService.requiresPermission());
 
@@ -42,11 +44,21 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
           setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setGpsAccuracy(pos.coords.accuracy);
         },
         (err) => console.warn("GPS tracking error", err),
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
       );
-      return () => navigator.geolocation.clearWatch(watchId);
+      
+      // Poll compass for live UI updates
+      const interval = setInterval(() => {
+        setLiveHeading(compassService.heading);
+      }, 500);
+
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+        clearInterval(interval);
+      };
     } else {
       console.warn("Geolocation not supported by this environment");
     }
@@ -291,6 +303,19 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(({ isAdmin, onSes
             </button>
           </div>
         )}
+        
+        {/* Debug UI for Admins to diagnose shifting */}
+        {isAdmin && (
+          <div className="absolute top-24 left-4 z-[998] pointer-events-none bg-[#0A0B0E]/80 border border-[#2D3139] text-[#00F0FF] p-3 rounded-sm text-[10px] font-mono tracking-wider backdrop-blur-md">
+             <div className="font-bold text-[#E0E2E5] mb-1">SENSOR DEBUG</div>
+             <div>GPS Acc: <span className={gpsAccuracy && gpsAccuracy > 15 ? 'text-[#FF0055]' : 'text-[#00FF00]'}>{gpsAccuracy ? `${gpsAccuracy.toFixed(1)}m` : 'Wait...'}</span></div>
+             <div>Heading: {liveHeading !== null ? `${liveHeading.toFixed(1)}°` : 'Wait...'}</div>
+             <div className="text-[#8E9299] mt-1 text-[8px] max-w-[120px] leading-tight">
+               If Acc > 10m or Heading is wrong, objects will shift.
+             </div>
+          </div>
+        )}
+
         <div ref={containerRef} className="absolute inset-0 w-full h-full bg-transparent" style={{ touchAction: 'none' }} />
         <div ref={buttonContainerRef} className="absolute inset-0 z-[100] pointer-events-none [&>button]:pointer-events-auto" />
     </div>
