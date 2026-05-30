@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
-import { firestoreService } from './firestoreService';
+import { firestoreService } from '../firebase/firestoreService';
 import { UserData } from '../types';
 
 interface AuthContextType {
