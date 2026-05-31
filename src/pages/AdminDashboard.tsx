@@ -8,7 +8,6 @@ import {
   Home,
   RefreshCw,
   Upload,
-  FileCube,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { storageService } from "../firebase/storageService";
@@ -41,15 +40,15 @@ export default function AdminDashboard() {
     },
     {
       id: "local-2",
-      name: "Example Coin",
-      url: "/models/coin.glb",
-      pointsValue: 10,
+      name: "Old",
+      url: "/models/Old.glb",
+      pointsValue: 100,
     },
     {
       id: "local-3",
       name: "Knight",
       url: "/models/Knight.glb",
-      pointsValue: 100,
+      pointsValue: 10,
     },
   ];
   const [activeLocalModel, setActiveLocalModel] = useState<CustomModel>(
@@ -67,6 +66,29 @@ export default function AdminDashboard() {
   const [placeOffsetX, setPlaceOffsetX] = useState<number>(0);
   const [placeOffsetY, setPlaceOffsetY] = useState<number>(-0.5);
   const [placeOffsetZ, setPlaceOffsetZ] = useState<number>(1.5);
+
+  const [selectedAdjustment, setSelectedAdjustment] = useState<'scale' | 'rotZ' | 'offsetX' | 'offsetY' | 'offsetZ'>('offsetZ');
+
+  useEffect(() => {
+    if (!sessionActive) {
+      if (arRef.current) {
+        arRef.current.clearPreview();
+      }
+      return;
+    }
+    const opts = { scale: placeScale, rotationZ: placeRotZ, offsetX: placeOffsetX, offsetY: placeOffsetY, offsetZ: placeOffsetZ };
+    if (selectedType === 'local_model') {
+      if (activeLocalModel) {
+        arRef.current?.updatePreview('model', '#ffffff', activeLocalModel.url, opts);
+      }
+    } else if (selectedType === 'cloud_model') {
+      if (activeCloudModel) {
+        arRef.current?.updatePreview('model', '#ffffff', activeCloudModel.url, opts);
+      }
+    } else {
+      arRef.current?.updatePreview(selectedType, selectedColor, undefined, opts);
+    }
+  }, [sessionActive, selectedType, selectedColor, activeLocalModel, activeCloudModel, placeScale, placeRotZ, placeOffsetX, placeOffsetY, placeOffsetZ]);
 
   // Upload Form
   const [isUploading, setIsUploading] = useState(false);
@@ -314,76 +336,55 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          <div className="flex gap-4 mb-4 bg-[#14161B]/90 backdrop-blur-md p-4 rounded-sm border border-[#2D3139] pointer-events-auto overflow-x-auto max-w-2xl mx-auto w-full">
-            <div className="flex flex-col gap-2 border-r border-[#2D3139] pr-4 shrink-0">
-              <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em] mb-1">
-                Scale: {placeScale}x
-              </label>
-              <input
-                type="range"
-                min="0.1"
-                max="10"
-                step="0.1"
-                value={placeScale}
-                onChange={(e) => setPlaceScale(parseFloat(e.target.value))}
-                className="w-24 accent-[#00F0FF]"
-              />
-
-              <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em] mb-1 mt-1">
-                Rot Z: {placeRotZ}°
-              </label>
-              <input
-                type="range"
-                min="-180"
-                max="180"
-                step="1"
-                value={placeRotZ}
-                onChange={(e) => setPlaceRotZ(parseFloat(e.target.value))}
-                className="w-24 accent-[#00F0FF]"
-              />
+          <div className="flex gap-4 mb-4 bg-[#14161B]/90 backdrop-blur-md p-4 rounded-sm border border-[#2D3139] pointer-events-auto overflow-x-auto max-w-sm mx-auto w-full items-center">
+            <div className="flex flex-col gap-1 shrink-0 w-24">
+              <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em]">Adjust</label>
+              <select
+                className="bg-[#1C1F26] text-[#E0E2E5] border border-[#2D3139] text-[10px] p-2 rounded-sm outline-none w-full"
+                value={selectedAdjustment}
+                onChange={(e) => setSelectedAdjustment(e.target.value as any)}
+              >
+                <option value="scale">Scale</option>
+                <option value="rotZ">Rot Z</option>
+                <option value="offsetX">Offset X</option>
+                <option value="offsetY">Offset Y</option>
+                <option value="offsetZ">Offset Z</option>
+              </select>
             </div>
+            
+            <div className="flex flex-col gap-2 flex-1 pt-1 border-l pl-4 border-[#2D3139]">
+              {(function() {
+                const cfg = {
+                  scale: { min: 0.1, max: 10, step: 0.1, val: placeScale, set: setPlaceScale, unit: 'x' },
+                  rotZ: { min: -180, max: 180, step: 1, val: placeRotZ, set: setPlaceRotZ, unit: '°' },
+                  offsetX: { min: -5, max: 5, step: 0.1, val: placeOffsetX, set: setPlaceOffsetX, unit: 'm' },
+                  offsetY: { min: -5, max: 5, step: 0.1, val: placeOffsetY, set: setPlaceOffsetY, unit: 'm' },
+                  offsetZ: { min: -5, max: 15, step: 0.1, val: placeOffsetZ, set: setPlaceOffsetZ, unit: 'm' },
+                }[selectedAdjustment];
 
-            <div className="flex flex-col gap-2 shrink-0 pr-4">
-              <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em] mb-1">
-                Offset X: {placeOffsetX}m
-              </label>
-              <input
-                type="range"
-                min="-5"
-                max="5"
-                step="0.1"
-                value={placeOffsetX}
-                onChange={(e) => setPlaceOffsetX(parseFloat(e.target.value))}
-                className="w-24 accent-[#00F0FF]"
-              />
+                const round = (num: number) => Number(num.toFixed(2));
+                const increase = () => cfg.set(Math.min(cfg.max, round(cfg.val + cfg.step)));
+                const decrease = () => cfg.set(Math.max(cfg.min, round(cfg.val - cfg.step)));
 
-              <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em] mb-1 mt-1">
-                Offset Y: {placeOffsetY}m
-              </label>
-              <input
-                type="range"
-                min="-5"
-                max="5"
-                step="0.1"
-                value={placeOffsetY}
-                onChange={(e) => setPlaceOffsetY(parseFloat(e.target.value))}
-                className="w-24 accent-[#00F0FF]"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 shrink-0 border-l pl-4 border-[#2D3139]">
-              <label className="text-[9px] font-bold text-[#8E9299] uppercase tracking-[0.2em] mb-1">
-                Offset Z: {placeOffsetZ}m
-              </label>
-              <input
-                type="range"
-                min="-5"
-                max="15"
-                step="0.1"
-                value={placeOffsetZ}
-                onChange={(e) => setPlaceOffsetZ(parseFloat(e.target.value))}
-                className="w-24 accent-[#00F0FF]"
-              />
+                return (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <button onClick={decrease} className="w-8 h-8 rounded-sm bg-[#1C1F26] border border-[#2D3139] text-[#E0E2E5] hover:bg-[#2D3139] flex items-center justify-center font-bold">-</button>
+                      <span className="text-xs font-mono text-[#00F0FF]">{cfg.val}{cfg.unit}</span>
+                      <button onClick={increase} className="w-8 h-8 rounded-sm bg-[#1C1F26] border border-[#2D3139] text-[#E0E2E5] hover:bg-[#2D3139] flex items-center justify-center font-bold">+</button>
+                    </div>
+                    <input
+                      type="range"
+                      min={cfg.min}
+                      max={cfg.max}
+                      step={cfg.step}
+                      value={cfg.val}
+                      onChange={(e) => cfg.set(parseFloat(e.target.value))}
+                      className="w-full accent-[#00F0FF]"
+                    />
+                  </>
+                );
+              })()}
             </div>
           </div>
 
