@@ -42,13 +42,13 @@ export default function AdminDashboard() {
       id: "local-2",
       name: "Old",
       url: "/models/Old.glb",
-      pointsValue: 100,
+      pointsValue: 10,
     },
     {
       id: "local-3",
       name: "Knight",
       url: "/models/Knight.glb",
-      pointsValue: 10,
+      pointsValue: 100,
     },
   ];
   const [activeLocalModel, setActiveLocalModel] = useState<CustomModel>(
@@ -62,12 +62,12 @@ export default function AdminDashboard() {
 
   // Placement Options
   const [placeScale, setPlaceScale] = useState<number>(1);
-  const [placeRotZ, setPlaceRotZ] = useState<number>(0);
+  const [placeRotY, setPlaceRotY] = useState<number>(0);
   const [placeOffsetX, setPlaceOffsetX] = useState<number>(0);
-  const [placeOffsetY, setPlaceOffsetY] = useState<number>(-0.5);
-  const [placeOffsetZ, setPlaceOffsetZ] = useState<number>(1.5);
+  const [placeOffsetY, setPlaceOffsetY] = useState<number>(1.5);
+  const [placeOffsetZ, setPlaceOffsetZ] = useState<number>(-0.5);
 
-  const [selectedAdjustment, setSelectedAdjustment] = useState<'scale' | 'rotZ' | 'offsetX' | 'offsetY' | 'offsetZ'>('offsetZ');
+  const [selectedAdjustment, setSelectedAdjustment] = useState<'scale' | 'rotY' | 'offsetX' | 'offsetY' | 'offsetZ'>('offsetY');
 
   useEffect(() => {
     if (!sessionActive) {
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
       }
       return;
     }
-    const opts = { scale: placeScale, rotationZ: placeRotZ, offsetX: placeOffsetX, offsetY: placeOffsetY, offsetZ: placeOffsetZ };
+    const opts = { scale: placeScale, rotationY: placeRotY, offsetX: placeOffsetX, offsetY: placeOffsetY, offsetZ: placeOffsetZ };
     if (selectedType === 'local_model') {
       if (activeLocalModel) {
         arRef.current?.updatePreview('model', '#ffffff', activeLocalModel.url, opts);
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
     } else {
       arRef.current?.updatePreview(selectedType, selectedColor, undefined, opts);
     }
-  }, [sessionActive, selectedType, selectedColor, activeLocalModel, activeCloudModel, placeScale, placeRotZ, placeOffsetX, placeOffsetY, placeOffsetZ]);
+  }, [sessionActive, selectedType, selectedColor, activeLocalModel, activeCloudModel, placeScale, placeRotY, placeOffsetX, placeOffsetY, placeOffsetZ]);
 
   // Upload Form
   const [isUploading, setIsUploading] = useState(false);
@@ -345,7 +345,7 @@ export default function AdminDashboard() {
                 onChange={(e) => setSelectedAdjustment(e.target.value as any)}
               >
                 <option value="scale">Scale</option>
-                <option value="rotZ">Rot Z</option>
+                <option value="rotY">Rot Z</option>
                 <option value="offsetX">Offset X</option>
                 <option value="offsetY">Offset Y</option>
                 <option value="offsetZ">Offset Z</option>
@@ -356,10 +356,10 @@ export default function AdminDashboard() {
               {(function() {
                 const cfg = {
                   scale: { min: 0.1, max: 10, step: 0.1, val: placeScale, set: setPlaceScale, unit: 'x' },
-                  rotZ: { min: -180, max: 180, step: 1, val: placeRotZ, set: setPlaceRotZ, unit: '°' },
+                  rotY: { min: -180, max: 180, step: 1, val: placeRotY, set: setPlaceRotY, unit: '°' },
                   offsetX: { min: -5, max: 5, step: 0.1, val: placeOffsetX, set: setPlaceOffsetX, unit: 'm' },
-                  offsetY: { min: -5, max: 5, step: 0.1, val: placeOffsetY, set: setPlaceOffsetY, unit: 'm' },
-                  offsetZ: { min: -5, max: 15, step: 0.1, val: placeOffsetZ, set: setPlaceOffsetZ, unit: 'm' },
+                  offsetY: { min: -5, max: 15, step: 0.1, val: placeOffsetY, set: setPlaceOffsetY, unit: 'm' },
+                  offsetZ: { min: -5, max: 5, step: 0.1, val: placeOffsetZ, set: setPlaceOffsetZ, unit: 'm' },
                 }[selectedAdjustment];
 
                 const round = (num: number) => Number(num.toFixed(2));
@@ -402,7 +402,7 @@ export default function AdminDashboard() {
               onClick={() => {
                 const opts = {
                   scale: placeScale,
-                  rotationZ: placeRotZ,
+                  rotationY: placeRotY,
                   offsetX: placeOffsetX,
                   offsetY: placeOffsetY,
                   offsetZ: placeOffsetZ,
