@@ -29,6 +29,19 @@ export interface ARCanvasRef {
       offsetZ?: number;
     },
   ) => void;
+  updatePreview: (
+    type: ARObject["type"] | null,
+    color: string,
+    modelUrl?: string,
+    options?: {
+      scale?: number;
+      rotationZ?: number;
+      offsetX?: number;
+      offsetY?: number;
+      offsetZ?: number;
+    },
+  ) => void;
+  clearPreview: () => void;
   deleteLookedAtObject: () => void;
   collectLookedAtObject: (userId: string) => Promise<boolean>;
   reanchor: () => void;
@@ -213,6 +226,8 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
       };
     }, []);
 
+    const [previewObject, setPreviewObject] = useState<ARObject | null>(null);
+
     useEffect(() => {
       if (!sceneManagerRef.current) return;
 
@@ -238,9 +253,14 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
             }) <= 200,
         );
       }
+      
+      const allObjects = [...filteredObjects];
+      if (previewObject) {
+         allObjects.push(previewObject);
+      }
 
-      sceneManagerRef.current.syncObjects(filteredObjects);
-    }, [objects, currentLocation]);
+      sceneManagerRef.current.syncObjects(allObjects);
+    }, [objects, currentLocation, previewObject]);
 
     useImperativeHandle(
       ref,
@@ -351,6 +371,89 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
             console.error("Failed to save object", e);
             alert("Failed to place object: " + (e as Error).message);
           }
+        },
+        updatePreview: async (
+          type: ARObject["type"] | null,
+          color: string,
+          modelUrl?: string,
+          options?: {
+            scale?: number;
+            rotationZ?: number;
+            offsetX?: number;
+            offsetY?: number;
+            offsetZ?: number;
+          },
+        ) => {
+          if (!type) {
+             setPreviewObject(null);
+             return;
+          }
+          
+          let finalLat = 0;
+          let finalLng = 0;
+
+          const offsetX = options?.offsetX ?? 0;
+          const offsetY = options?.offsetY ?? -0.5;
+          const offsetZ = options?.offsetZ ?? 1.5;
+          const scale = options?.scale ?? 1;
+          const rotZ = options?.rotationZ ?? 0;
+
+          if (sceneManagerRef.current && sceneManagerRef.current.originGPS) {
+            const pos = sceneManagerRef.current.getCameraPosition();
+            const dir = sceneManagerRef.current.getCameraDirection();
+
+            const worldTarget = new THREE.Vector3(
+              pos.x + dir.x * offsetZ + offsetX,
+              pos.y + dir.y * offsetZ,
+              pos.z + dir.z * offsetZ,
+            );
+
+            const localTarget =
+              sceneManagerRef.current.objectsGroup.worldToLocal(
+                worldTarget.clone(),
+              );
+
+            const calculatedGPS = await import("../utils/gps").then((m) =>
+              m.localToGps(
+                localTarget.x,
+                localTarget.z,
+                sceneManagerRef.current!.originGPS!.lat,
+                sceneManagerRef.current!.originGPS!.lng,
+              ),
+            );
+            finalLat = calculatedGPS.lat;
+            finalLng = calculatedGPS.lng;
+          } else {
+            // Fallback to raw GPS if AR session isn't fully established
+            let loc = currentLocation;
+            if (!loc) {
+               finalLat = 0;
+               finalLng = 0;
+            } else {
+               finalLat = loc.lat;
+               finalLng = loc.lng;
+            }
+          }
+
+          const previewObj: ARObject = {
+            id: 'preview-object', // special id for preview
+            type,
+            modelUrl,
+            name: "Preview Object",
+            pointsValue: 0,
+            latitude: finalLat,
+            longitude: finalLng,
+            altitude: offsetY,
+            scale: scale,
+            rotation: { x: 0, y: 0, z: (rotZ * Math.PI) / 180 },
+            color,
+            createdAt: Date.now(),
+          };
+
+          setPreviewObject(previewObj);
+        },
+        clearPreview: () => {
+          setPreviewObject(null);
         },
         deleteLookedAtObject: () => {
           if (!sceneManagerRef.current) return;
