@@ -23,7 +23,7 @@ export interface ARCanvasRef {
     name?: string,
     options?: {
       scale?: number;
-      rotationZ?: number;
+      rotationY?: number;
       offsetX?: number;
       offsetY?: number;
       offsetZ?: number;
@@ -35,7 +35,7 @@ export interface ARCanvasRef {
     modelUrl?: string,
     options?: {
       scale?: number;
-      rotationZ?: number;
+      rotationY?: number;
       offsetX?: number;
       offsetY?: number;
       offsetZ?: number;
@@ -273,7 +273,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
           name?: string,
           options?: {
             scale?: number;
-            rotationZ?: number;
+            rotationY?: number;
             offsetX?: number;
             offsetY?: number;
             offsetZ?: number;
@@ -283,21 +283,29 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
           let finalLng = 0;
 
           const offsetX = options?.offsetX ?? 0;
-          const offsetY = options?.offsetY ?? -0.5;
-          const offsetZ = options?.offsetZ ?? 1.5;
+          const offsetY = options?.offsetY ?? 1.5;
+          const offsetZ = options?.offsetZ ?? -0.5;
           const scale = options?.scale ?? 1;
-          const rotZ = options?.rotationZ ?? 0;
+          const rotY = options?.rotationY ?? 0;
 
           if (sceneManagerRef.current && sceneManagerRef.current.originGPS) {
-            // Calculate AR-perfect GPS coordinate by translating camera position 1.5m forward
+            const THREE = await import("three");
+            // Calculate AR-perfect GPS coordinate
             const pos = sceneManagerRef.current.getCameraPosition();
             const dir = sceneManagerRef.current.getCameraDirection();
+            
+            dir.y = 0;
+            if (dir.lengthSq() < 0.0001) dir.set(0, 0, -1);
+            dir.normalize();
 
-            // Find the absolute world coordinate 1.5m in front of the camera
+            const up = new THREE.Vector3(0, 1, 0);
+            const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+
+            // Find the absolute world coordinate forward and right of the camera
             const worldTarget = new THREE.Vector3(
-              pos.x + dir.x * offsetZ + offsetX,
-              pos.y + dir.y * offsetZ,
-              pos.z + dir.z * offsetZ,
+              pos.x + dir.x * offsetY + right.x * offsetX,
+              pos.y,
+              pos.z + dir.z * offsetY + right.z * offsetX,
             );
 
             // Convert that world coordinate into the objectsGroup's local space (which handles un-rotating the compass heading)
@@ -357,9 +365,9 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
             pointsValue: pointsValue || 10,
             latitude: finalLat,
             longitude: finalLng,
-            altitude: offsetY, // slightly below camera height by default
+            altitude: offsetZ,
             scale: scale,
-            rotation: { x: 0, y: 0, z: (rotZ * Math.PI) / 180 },
+            rotation: { x: 0, y: (rotY * Math.PI) / 180, z: 0 },
             color,
             createdAt: Date.now(),
           };
@@ -378,34 +386,42 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
           modelUrl?: string,
           options?: {
             scale?: number;
-            rotationZ?: number;
+            rotationY?: number;
             offsetX?: number;
             offsetY?: number;
             offsetZ?: number;
           },
         ) => {
           if (!type) {
-             setPreviewObject(null);
-             return;
+            setPreviewObject(null);
+            return;
           }
-          
+
           let finalLat = 0;
           let finalLng = 0;
 
           const offsetX = options?.offsetX ?? 0;
-          const offsetY = options?.offsetY ?? -0.5;
-          const offsetZ = options?.offsetZ ?? 1.5;
+          const offsetY = options?.offsetY ?? 1.5;
+          const offsetZ = options?.offsetZ ?? -0.5;
           const scale = options?.scale ?? 1;
-          const rotZ = options?.rotationZ ?? 0;
+          const rotY = options?.rotationY ?? 0;
 
           if (sceneManagerRef.current && sceneManagerRef.current.originGPS) {
+            const THREE = await import("three");
             const pos = sceneManagerRef.current.getCameraPosition();
             const dir = sceneManagerRef.current.getCameraDirection();
 
+            dir.y = 0;
+            if (dir.lengthSq() < 0.0001) dir.set(0, 0, -1);
+            dir.normalize();
+
+            const up = new THREE.Vector3(0, 1, 0);
+            const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+
             const worldTarget = new THREE.Vector3(
-              pos.x + dir.x * offsetZ + offsetX,
-              pos.y + dir.y * offsetZ,
-              pos.z + dir.z * offsetZ,
+              pos.x + dir.x * offsetY + right.x * offsetX,
+              pos.y,
+              pos.z + dir.z * offsetY + right.z * offsetX,
             );
 
             const localTarget =
@@ -427,25 +443,25 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
             // Fallback to raw GPS if AR session isn't fully established
             let loc = currentLocation;
             if (!loc) {
-               finalLat = 0;
-               finalLng = 0;
+              finalLat = 0;
+              finalLng = 0;
             } else {
-               finalLat = loc.lat;
-               finalLng = loc.lng;
+              finalLat = loc.lat;
+              finalLng = loc.lng;
             }
           }
 
           const previewObj: ARObject = {
-            id: 'preview-object', // special id for preview
+            id: "preview-object", // special id for preview
             type,
             modelUrl,
             name: "Preview Object",
             pointsValue: 0,
             latitude: finalLat,
             longitude: finalLng,
-            altitude: offsetY,
+            altitude: offsetZ,
             scale: scale,
-            rotation: { x: 0, y: 0, z: (rotZ * Math.PI) / 180 },
+            rotation: { x: 0, y: (rotY * Math.PI) / 180, z: 0 },
             color,
             createdAt: Date.now(),
           };
