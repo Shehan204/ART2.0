@@ -40,8 +40,8 @@ export default function AdminDashboard() {
     },
     {
       id: "local-2",
-      name: "Example Coin",
-      url: "/models/coin.glb",
+      name: "Old",
+      url: "/models/Old.glb",
       pointsValue: 10,
     },
     {
