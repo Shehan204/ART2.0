@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { ARObject } from '../types';
 
 export class ObjectFactory {
@@ -12,8 +13,17 @@ export class ObjectFactory {
 
     if (obj.type === 'model' && obj.modelUrl) {
       const loader = new GLTFLoader();
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+      loader.setDRACOLoader(dracoLoader);
+
+      let finalUrl = obj.modelUrl;
+      if (finalUrl.includes('firebasestorage.googleapis.com')) {
+        finalUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
+      }
+
       loader.load(
-        obj.modelUrl,
+        finalUrl,
         (gltf) => {
           const model = gltf.scene;
           
@@ -40,8 +50,9 @@ export class ObjectFactory {
           console.error("An error happened loading GLTF", error);
           // Fallback box to make sure SOMETHING renders if the model fails
           const fallbackGeom = new THREE.BoxGeometry(1, 1, 1);
-          const fallbackMat = new THREE.MeshStandardMaterial({ color: '#ff0000', wireframe: true });
-          const fallbackMesh = new THREE.Mesh(fallbackGeom, fallbackMat);
+          const edges = new THREE.EdgesGeometry(fallbackGeom);
+          const fallbackMat = new THREE.LineBasicMaterial({ color: '#00A3FF', linewidth: 3 });
+          const fallbackMesh = new THREE.LineSegments(edges, fallbackMat);
           group.add(fallbackMesh);
         }
       );
