@@ -357,9 +357,9 @@ export default function AdminDashboard() {
                 const cfg = {
                   scale: { min: 0.1, max: 1000, step: 0.1, val: placeScale, set: setPlaceScale, unit: 'x' },
                   rotY: { min: -180, max: 180, step: 1, val: placeRotY, set: setPlaceRotY, unit: '°' },
-                  offsetX: { min: -5, max: 5, step: 0.1, val: placeOffsetX, set: setPlaceOffsetX, unit: 'm' },
-                  offsetY: { min: -5, max: 15, step: 0.1, val: placeOffsetY, set: setPlaceOffsetY, unit: 'm' },
-                  offsetZ: { min: -5, max: 5, step: 0.1, val: placeOffsetZ, set: setPlaceOffsetZ, unit: 'm' },
+                  offsetX: { min: -500, max: 500, step: 0.1, val: placeOffsetX, set: setPlaceOffsetX, unit: 'm' },
+                  offsetY: { min: -500, max: 500, step: 0.1, val: placeOffsetY, set: setPlaceOffsetY, unit: 'm' },
+                  offsetZ: { min: -500, max: 500, step: 0.1, val: placeOffsetZ, set: setPlaceOffsetZ, unit: 'm' },
                 }[selectedAdjustment];
 
                 const round = (num: number) => Number(num.toFixed(2));
