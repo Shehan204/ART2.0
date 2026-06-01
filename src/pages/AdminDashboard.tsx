@@ -40,8 +40,8 @@ export default function AdminDashboard() {
     },
     {
       id: "local-2",
-      name: "Old",
-      url: "/models/Old.glb",
+      name: "Example Coin",
+      url: "/models/coin.glb",
       pointsValue: 10,
     },
     {
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
             <div className="flex flex-col gap-2 flex-1 pt-1 border-l pl-4 border-[#2D3139]">
               {(function() {
                 const cfg = {
-                  scale: { min: 0.1, max: 10, step: 0.1, val: placeScale, set: setPlaceScale, unit: 'x' },
+                  scale: { min: 0.1, max: 1000, step: 0.1, val: placeScale, set: setPlaceScale, unit: 'x' },
                   rotY: { min: -180, max: 180, step: 1, val: placeRotY, set: setPlaceRotY, unit: '°' },
                   offsetX: { min: -5, max: 5, step: 0.1, val: placeOffsetX, set: setPlaceOffsetX, unit: 'm' },
                   offsetY: { min: -5, max: 15, step: 0.1, val: placeOffsetY, set: setPlaceOffsetY, unit: 'm' },
