@@ -452,7 +452,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
           }
 
           const previewObj: ARObject = {
-            id: "preview-object", // special id for preview
+            id: `preview-object-${type}-${modelUrl || 'none'}`, // dynamic id forces re-creation when url changes
             type,
             modelUrl,
             name: "Preview Object",
