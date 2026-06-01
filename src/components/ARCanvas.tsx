@@ -125,8 +125,7 @@ export const ARCanvas = forwardRef<ARCanvasRef, ARCanvasProps>(
 
       // Simple AR button, no hit test or local floor required
       const button = ARButton.createButton(sceneManager.renderer, {
-        requiredFeatures: ["local"],
-        optionalFeatures: ["dom-overlay", "local-floor", "hit-test"],
+        optionalFeatures: ["dom-overlay"],
         domOverlay: { root: document.body },
       });
 
